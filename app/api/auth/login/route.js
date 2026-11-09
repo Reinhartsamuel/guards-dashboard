@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { verifyPassword, signToken } from '@/lib/auth';
+import { verifyPassword, signToken } from '../../../../lib/auth';
 
-export async function POST(req: Request) {
+export async function POST(req) {
   const { username, password } = await req.json();
 
   if (username !== process.env.ADMIN_USER) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const valid = await verifyPassword(password, process.env.ADMIN_PASSWORD_HASH!);
+  const valid = await verifyPassword(password, process.env.ADMIN_PASSWORD_HASH);
   if (!valid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }

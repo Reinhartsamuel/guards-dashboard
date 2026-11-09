@@ -1,5 +1,5 @@
-import { getSessionToken, verifyToken } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getSessionToken, verifyToken } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
 import { redirect } from 'next/navigation';
 
 export default async function Dashboard() {

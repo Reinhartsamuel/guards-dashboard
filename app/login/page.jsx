@@ -6,7 +6,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  async function handleSubmit(e: FormDataEvent) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const res = await fetch('/api/auth/login', {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getSessionToken } from '@/lib/auth';
+import { supabase } from '../../../lib/supabase';
+import { getSessionToken } from '../../../lib/auth';
 
 export async function GET() {
   const token = getSessionToken();
@@ -15,16 +15,16 @@ export async function GET() {
   return NextResponse.json({ reports: data ?? [] });
 }
 
-export async function POST(req: Request) {
+export async function POST(req) {
   const deviceKey = req.headers.get('x-device-key');
   if (deviceKey !== process.env.DEVICE_API_KEY) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const form = await req.formData();
-  const waktu = form.get('waktu') as string;
-  const status = form.get('status') as string;
-  const image = form.get('image') as File;
+  const waktu = form.get('waktu');
+  const status = form.get('status');
+  const image = form.get('image');
 
   if (!waktu || !status || !image) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
