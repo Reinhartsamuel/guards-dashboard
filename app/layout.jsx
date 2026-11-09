@@ -1,4 +1,5 @@
 import ThemeInit from '../lib/theme-init';
+import './globals.css';
 
 export const metadata = {
   title: 'GUARDS Dashboard',
