@@ -2,10 +2,10 @@ import cv2
 import time
 import requests
 
-DASHBOARD_URL = "https://nama-app-vercel-kamu.vercel.app/api/reports"
+DASHBOARD_URL = "https://guards-dashboard.vercel.app/api/reports"
 DEVICE_API_KEY = "kunci-...-env"
-DISTRACTION_THRESHOLD = 4.0   # detik
-MAX_WIDTH = 640               # resize agar ringan
+DISTRACTION_THRESHOLD = 4.0
+MAX_WIDTH = 640
 IMAGE_QUALITY = 75
 
 import mediapipe as mp
@@ -33,36 +33,28 @@ def estimate_status(frame):
     res = face_mesh.process(rgb)
     if not res.multi_face_landmarks:
         return "Not Focus"
-
     lm = res.multi_face_landmarks[0].landmark
     h, w = frame.shape[:2]
-
     nose = lm[1]
     chin = lm[152]
     left_eye = lm[33]
     right_eye = lm[263]
-
     nose_x = nose.x * w
     eye_cx = ((left_eye.x + right_eye.x) / 2) * w
     offset_x = nose_x - eye_cx
-
     if abs(offset_x) > w * 0.12:
         return "Not Focus"
-
     if (nose.y * h) < (chin.y * h * 0.75):
         return "Not Focus"
-
     return "Focus"
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
-
     frame = resize_frame(frame)
     status = estimate_status(frame)
     now = time.monotonic()
-
     if status == "Not Focus":
         if distraction_start is None:
             distraction_start = now
@@ -75,17 +67,16 @@ while True:
                     requests.post(
                         DASHBOARD_URL,
                         headers={"X-Device-Key": DEVICE_API_KEY},
-                        data={"waktu": ts, "status": "terdistraksi"},
+                        data={"time": ts, "status": "distracted"},
                         files={"image": ("snapshot.jpg", jpg.tobytes(), "image/jpeg")},
                         timeout=10,
                     )
-                    print("Laporan terkirim:", ts)
+                    print("Report sent:", ts)
                 except Exception as e:
-                    print("Gagal kirim:", e)
+                    print("Failed to send:", e)
             distraction_start = None
     else:
         distraction_start = None
-
     cv2.imshow("GUARDS Monitor", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
