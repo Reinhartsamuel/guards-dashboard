@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
-import { getSessionToken } from '../../../lib/auth';
+import { getSessionToken } from '../../../lib/auth.server';
 
 export async function GET() {
   const token = getSessionToken();
