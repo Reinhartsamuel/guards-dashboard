@@ -1,29 +1,10 @@
 import { supabase } from '../../lib/supabase';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 
-export async function getSessionToken() {
-  return cookies().get('token')?.value;
-}
-
-export async function verifyToken(token) {
-  const jwt = await import('jsonwebtoken');
-  return jwt.verify(token, process.env.JWT_SECRET);
-}
+export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  let reports = [];
-  try {
-    if (supabase) {
-      const result = await supabase
-        .from('reports')
-        .select('*')
-        .order('time', { ascending: false });
-      reports = result.data ?? [];
-    }
-  } catch {
-    reports = [];
-  }
+  const { data: reports = [] } = await supabase
 
   const total = reports.length;
   const distracted = reports.filter((r) => r.status === 'distracted').length;
