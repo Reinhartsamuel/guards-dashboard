@@ -1,36 +1,111 @@
-import { supabase } from '../../lib/supabase';
-import { redirect } from 'next/navigation';
+'use client';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
+export default function Dashboard() {
+  const router = useRouter();
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const chartRef = useRef(null);
 
-export default async function Dashboard() {
-  const { data: reports = [] } = await supabase
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/reports', { credentials: 'include' });
+      if (res.status === 401) {
+        router.replace('/login');
+        return;
+      }
+      const json = await res.json();
+      if (!cancelled) {
+        setReports(json.reports ?? []);
+        setLoading(false);
+        drawChart(json.reports ?? []);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router]);
+
+  useEffect(() => {
+    drawChart(reports);
+  }, [reports]);
+
+  function handleLogout(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST' }).then(() => router.push('/login'));
+  }
 
   const total = reports.length;
   const distracted = reports.filter((r) => r.status === 'distracted').length;
   const focus = total - distracted;
   const rate = total ? Math.round((distracted / total) * 100) : 0;
 
-  // Chart data: last 7 days
-  const days = 7;
-  const labels = [];
-  const distractedByDay = {};
-  const focusByDay = {};
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    labels.push(key);
-    distractedByDay[key] = 0;
-    focusByDay[key] = 0;
-  }
-  reports.forEach((r) => {
-    const key = new Date(r.time).toISOString().slice(0, 10);
-    if (distractedByDay[key] !== undefined) {
-      if (r.status === 'distracted') distractedByDay[key]++;
-      else focusByDay[key]++;
+  function drawChart(data) {
+    if (!chartRef.current) return;
+    const canvas = chartRef.current;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const days = 7;
+    const labels = [];
+    const distractedByDay = {};
+    const focusByDay = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      labels.push(key);
+      distractedByDay[key] = 0;
+      focusByDay[key] = 0;
     }
-  });
+    data.forEach((r) => {
+      const key = new Date(r.time).toISOString().slice(0, 10);
+      if (distractedByDay[key] !== undefined) {
+        if (r.status === 'distracted') distractedByDay[key]++;
+        else focusByDay[key]++;
+      }
+    });
+
+    const maxVal = Math.max(...labels.map((k) => distractedByDay[k] + focusByDay[k]), 1);
+    const pad = 40;
+    const areaW = w - pad * 2;
+    const areaH = h - pad * 2;
+
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    labels.forEach((label, i) => {
+      const x = pad + (areaW * i) / (labels.length - 1);
+      const short = label.slice(5);
+      ctx.textAlign = 'center';
+      ctx.fillText(short, x, h - 24);
+    });
+
+    function bar(values, color, offset) {
+      values.forEach((val, i) => {
+        const x = pad + (areaW * i) / (labels.length - 1) - 14;
+        const barH = (val / maxVal) * areaH;
+        const y = h - pad - barH + offset;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 28, barH);
+      });
+    }
+
+    bar(Object.values(focusByDay), '#22c55e', 14);
+    bar(Object.values(distractedByDay), '#ef4444', -14);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText('Focus', pad, 20);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText('Distracted', pad + 40, 20);
+  }
 
   return (
     <div className="min-h-screen dark-bg">
@@ -45,7 +120,7 @@ export default async function Dashboard() {
             <span className="font-bold text-dark-text tracking-tight">GUARDS<span className="text-brand-400">Reports</span></span>
           </div>
           <div className="flex items-center gap-3">
-            <form action="/api/auth/logout" method="POST">
+            <form action="/api/auth/logout" method="POST" onSubmit={handleLogout}>
               <button className="btn-ghost px-4 py-2 text-sm">Logout</button>
             </form>
           </div>
@@ -67,7 +142,7 @@ export default async function Dashboard() {
                   </svg>
                   Export
                 </button>
-                <button className="btn-brand px-5 py-2 text-sm hidden md:flex items-center gap-2">
+                <button className="btn-brand px-5 py-2 text-sm hidden md:flex items-center gap-2" onClick={() => window.location.reload()}>
                   Refresh
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -114,7 +189,7 @@ export default async function Dashboard() {
               <span className="text-xs text-dark-muted">Focus vs Distracted</span>
             </div>
             <div className="relative h-48 w-full flex items-end">
-              <canvas id="activityChart" className="w-full h-full" />
+              <canvas ref={chartRef} className="w-full h-full" />
             </div>
           </div>
           <div className="chart-wrap animate-fade-in" style={{ animationDelay: '0.3s' }}>
@@ -149,78 +224,6 @@ export default async function Dashboard() {
             </div>
           </div>
         </div>
-
-        <script
-          id="activity-chart-data"
-          type="application/json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              labels,
-              distracted: labels.map((k) => distractedByDay[k]),
-              focus: labels.map((k) => focusByDay[k]),
-            }),
-          }}
-        />
-        <script
-          id="activity-chart-script"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (() => {
-                const dataEl = document.getElementById('activity-chart-data');
-                if (!dataEl) return;
-                const { labels, distracted, focus } = JSON.parse(dataEl.textContent);
-                const canvas = document.getElementById('activityChart');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-                const w = rect.width;
-                const h = rect.height;
-                ctx.clearRect(0, 0, w, h);
-
-                const pad = 40;
-                const areaW = w - pad * 2;
-                const areaH = h - pad * 2;
-
-                const maxVal = Math.max(
-                  ...labels.map((_, i) => distracted[i] + focus[i]),
-                  1
-                );
-
-                ctx.font = '12px Inter, system-ui, sans-serif';
-                ctx.fillStyle = '#94a3b8';
-                labels.forEach((label, i) => {
-                  const x = pad + (areaW * i) / (labels.length - 1);
-                  const short = label.slice(5);
-                  ctx.textAlign = 'center';
-                  ctx.fillText(short, x, h - 24);
-                });
-
-                function bar(values, color, offset) {
-                  values.forEach((val, i) => {
-                    const x = pad + (areaW * i) / (labels.length - 1) - 14;
-                    const barH = (val / maxVal) * areaH;
-                    const y = h - pad - barH + offset;
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x, y, 28, barH);
-                  });
-                }
-
-                bar(focus, '#22c55e', 14);
-                bar(distracted, '#ef4444', -14);
-
-                ctx.fillStyle = '#94a3b8';
-                ctx.textAlign = 'left';
-                ctx.fillText('Focus', pad, 20);
-                ctx.fillStyle = '#ef4444';
-                ctx.fillText('Distracted', pad + 40, 20);
-              })();
-            `,
-          }}
-        />
 
         <div className="table-wrap animate-fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="p-6 border-b border-dark-border flex items-center justify-between">
