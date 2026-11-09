@@ -12,9 +12,18 @@ export async function verifyToken(token) {
 }
 
 export default async function Dashboard() {
-  const reports = supabase
-    ? (await supabase.from('reports').select('*').order('time', { ascending: false })).data ?? []
-    : [];
+  let reports = [];
+  try {
+    if (supabase) {
+      const result = await supabase
+        .from('reports')
+        .select('*')
+        .order('time', { ascending: false });
+      reports = result.data ?? [];
+    }
+  } catch {
+    reports = [];
+  }
 
   const total = reports.length;
   const distracted = reports.filter((r) => r.status === 'distracted').length;
