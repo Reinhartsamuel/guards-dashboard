@@ -7,10 +7,14 @@ export default async function Dashboard() {
   if (!token) redirect('/login');
   try { verifyToken(token); } catch { redirect('/login'); }
 
-  const { data: reports = [] } = await supabase
-    .from('reports')
-    .select('*')
-    .order('waktu', { ascending: false });
+  let reports = [];
+  if (supabase) {
+    const { data } = await supabase
+      .from('reports')
+      .select('*')
+      .order('waktu', { ascending: false });
+    reports = data || [];
+  }
 
   const total = reports.length;
   const terdistraksi = reports.filter((r) => r.status === 'terdistraksi').length;
