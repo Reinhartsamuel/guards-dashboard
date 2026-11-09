@@ -6,9 +6,9 @@ export async function getSessionToken() {
   return cookies().get('token')?.value;
 }
 
-export async function verifyToken(token: string) {
+export async function verifyToken(token) {
   const jwt = await import('jsonwebtoken');
-  return jwt.verify(token, process.env.JWT_SECRET!);
+  return jwt.verify(token, process.env.JWT_SECRET);
 }
 
 export default async function Dashboard() {
@@ -176,61 +176,66 @@ export default async function Dashboard() {
             }),
           }}
         />
-        <script>
-          (() => {
-            const dataEl = document.getElementById('activity-chart-data');
-            if (!dataEl) return;
-            const { labels, distracted, focus } = JSON.parse(dataEl.textContent);
-            const canvas = document.getElementById('activityChart');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-            const w = rect.width;
-            const h = rect.height;
-            ctx.clearRect(0, 0, w, h);
+        <script
+          id="activity-chart-script"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                const dataEl = document.getElementById('activity-chart-data');
+                if (!dataEl) return;
+                const { labels, distracted, focus } = JSON.parse(dataEl.textContent);
+                const canvas = document.getElementById('activityChart');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                const w = rect.width;
+                const h = rect.height;
+                ctx.clearRect(0, 0, w, h);
 
-            const pad = 40;
-            const areaW = w - pad * 2;
-            const areaH = h - pad * 2;
+                const pad = 40;
+                const areaW = w - pad * 2;
+                const areaH = h - pad * 2;
 
-            const maxVal = Math.max(
-              ...labels.map((_, i) => distracted[i] + focus[i]),
-              1
-            );
+                const maxVal = Math.max(
+                  ...labels.map((_, i) => distracted[i] + focus[i]),
+                  1
+                );
 
-            ctx.font = '12px Inter, system-ui, sans-serif';
-            ctx.fillStyle = '#94a3b8';
-            labels.forEach((label, i) => {
-              const x = pad + (areaW * i) / (labels.length - 1);
-              const short = label.slice(5);
-              ctx.textAlign = 'center';
-              ctx.fillText(short, x, h - 24);
-            });
+                ctx.font = '12px Inter, system-ui, sans-serif';
+                ctx.fillStyle = '#94a3b8';
+                labels.forEach((label, i) => {
+                  const x = pad + (areaW * i) / (labels.length - 1);
+                  const short = label.slice(5);
+                  ctx.textAlign = 'center';
+                  ctx.fillText(short, x, h - 24);
+                });
 
-            function bar(values, color, offset) {
-              values.forEach((val, i) => {
-                const x = pad + (areaW * i) / (labels.length - 1) - 14;
-                const barH = (val / maxVal) * areaH;
-                const y = h - pad - barH + offset;
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, 28, barH);
-              });
-            }
+                function bar(values, color, offset) {
+                  values.forEach((val, i) => {
+                    const x = pad + (areaW * i) / (labels.length - 1) - 14;
+                    const barH = (val / maxVal) * areaH;
+                    const y = h - pad - barH + offset;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, 28, barH);
+                  });
+                }
 
-            bar(focus, '#22c55e', 14);
-            bar(distracted, '#ef4444', -14);
+                bar(focus, '#22c55e', 14);
+                bar(distracted, '#ef4444', -14);
 
-            ctx.fillStyle = '#94a3b8';
-            ctx.textAlign = 'left';
-            ctx.fillText('Focus', pad, 20);
-            ctx.fillStyle = '#ef4444';
-            ctx.fillText('Distracted', pad + 40, 20);
-          })();
-        </script>
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'left';
+                ctx.fillText('Focus', pad, 20);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillText('Distracted', pad + 40, 20);
+              })();
+            `,
+          }}
+        />
 
         <div className="table-wrap animate-fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="p-6 border-b border-dark-border flex items-center justify-between">
