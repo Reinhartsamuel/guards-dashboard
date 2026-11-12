@@ -35,6 +35,11 @@ export default function Dashboard() {
     fetch('/api/auth/logout', { method: 'POST' }).then(() => router.push('/login'));
   }
 
+  function openImage(url) {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   const total = reports.length;
   const distracted = reports.filter((r) => r.status === 'distracted').length;
   const focus = total - distracted;
@@ -260,7 +265,7 @@ export default function Dashboard() {
                           src={r.image_url}
                           alt="screenshot"
                           className="w-20 h-12 object-cover rounded-lg border border-dark-border/40 cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
-                          onClick={() => window.open(r.image_url, '_blank')}
+                          onClick={() => openImage(r.image_url)}
                         />
                         <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,7 +276,17 @@ export default function Dashboard() {
                       </div>
                     </td>
                     <td className="text-right">
-                      <button className="text-xs text-brand-400 hover:underline underline-offset-4">Open</button>
+                      {r.image_url ? (
+                        <button
+                          type="button"
+                          onClick={() => openImage(r.image_url)}
+                          className="text-xs text-brand-400 hover:underline underline-offset-4"
+                        >
+                          Open
+                        </button>
+                      ) : (
+                        <span className="text-xs text-dark-muted">No photo</span>
+                      )}
                     </td>
                   </tr>
                 ))}
